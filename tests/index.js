@@ -4,7 +4,7 @@ var Board = GrovePi.board
 var DHTDigitalSensor = GrovePi.sensors.DHTDigital
 var LightAnalogSensor = GrovePi.sensors.LightAnalog
 var LoudnessAnalogSensor = GrovePi.sensors.LoudnessAnalog
-//var led = new GrovePi.sensors.DigitalOutput(3)
+var led = new GrovePi.sensors.DigitalOutput(3)
 require("dotenv").config();
 const Protocol = require("azure-iot-device-amqp").Amqp;
 const Client = require("azure-iot-device").Client;
@@ -13,11 +13,11 @@ const uuid = require("uuid");
 var environmentUpdateInterval = 5*1000; // every 5 seconds
 var sendInterval = null;
 var connectionString = process.env.CONNECTIONSTRING;
-// console.log(connectionString);
+
 
 var client = Client.fromConnectionString(connectionString, Protocol);
 var dhtSensor = new DHTDigitalSensor(4, DHTDigitalSensor.VERSION.DHT11, DHTDigitalSensor.CELSIUS)
-
+const BME280 = require('./BME280');
 
 var board
 //led.turnOn();
@@ -104,12 +104,26 @@ function onExit(err) {
     console.log(err)
 }
 
+
+function blinkLED(){
+	led.turnOn();
+	setTimeout(function(){led.turnOff()}, 3000);
+}
+
+function receiveMessageCallBack(msg){
+  blinkLED();
+  client.complete(msg, () => {
+	console.log(msg);
+	})
+}
+
 client.open(function (err, result) {
   if (err) {
     log.err("open error:", err);
   } else {
     start();
-    // setInterval(getAllSensorData, 1000)
+    blinkLED();
+    client.on('message', receiveMessageCallBack)
     client.on("error", function (err) {
       log.err("client error:", err);
       if (sendInterval) clearInterval(sendInterval);
